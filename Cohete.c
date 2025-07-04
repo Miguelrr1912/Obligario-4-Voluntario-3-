@@ -10,6 +10,7 @@
 #define RT 6.378160e6
 #define RL 1.7374e6
 #define h 1 //minuto
+#define hs (h*60) //segundos
 
 typedef struct {
     double r,phi;
@@ -32,7 +33,7 @@ double fpr(double r, double phi, double pr, double pphi,double t)
     double rprima, mu, delta;
     delta=G*MT/(d*d*d);
     mu=ML/MT;
-    rprima=sqrt(1+r*r - 2*r*cos(phi-omega*h));
+    rprima=sqrt(1+r*r - 2*r*cos(phi-omega*t));
     return pphi*pphi/(r*r*r)-delta*(1/(r*r)+mu*1/(rprima*rprima*rprima)*(r-cos(phi-omega*t)));
 }
 
@@ -41,7 +42,7 @@ double fpphi(double r, double phi, double pr, double pphi,double t)
     double delta,mu, rprima;
     delta=G*MT/(d*d*d);
     mu=ML/MT;
-    rprima=sqrt(1+r*r - 2*r*cos(phi-omega*h));
+    rprima=sqrt(1+r*r - 2*r*cos(phi-omega*t));
     return -delta*mu*r/(rprima*rprima*rprima)*sin(phi-omega*t);
 }
 
@@ -50,28 +51,28 @@ void runge_kuttap(cohete *cohete, FILE *file,double t)
     double k[4][4];  
 
     // Evaluo k1
-    k[0][0] = h * fr(cohete->pr);
-    k[1][0] = h * fphi(cohete->pphi, cohete->r);
-    k[2][0] = h * fpr(cohete->r, cohete->phi, cohete->pr, cohete->pphi, t);
-    k[3][0] = h * fpphi(cohete->r, cohete->phi, cohete->pr, cohete->pphi, t);
+    k[0][0] = hs * fr(cohete->pr);
+    k[1][0] = hs * fphi(cohete->pphi, cohete->r);
+    k[2][0] = hs * fpr(cohete->r, cohete->phi, cohete->pr, cohete->pphi, t);
+    k[3][0] = hs * fpphi(cohete->r, cohete->phi, cohete->pr, cohete->pphi, t);
 
     // Evaluo k2
-    k[0][1] = h * fr(cohete->pr + k[2][0]/2);
-    k[1][1] = h * fphi(cohete->pphi + k[3][0]/2, cohete->r + k[0][0]/2);
-    k[2][1] = h * fpr(cohete->r + k[0][0]/2, cohete->phi + k[1][0]/2, cohete->pr + k[2][0]/2, cohete->pphi + k[3][0]/2, t);
-    k[3][1] = h * fpphi(cohete->r + k[0][0]/2, cohete->phi + k[1][0]/2, cohete->pr + k[2][0]/2, cohete->pphi + k[3][0]/2, t);
+    k[0][1] = hs * fr(cohete->pr + k[2][0]/2);
+    k[1][1] = hs * fphi(cohete->pphi + k[3][0]/2, cohete->r + k[0][0]/2);
+    k[2][1] = hs * fpr(cohete->r + k[0][0]/2, cohete->phi + k[1][0]/2, cohete->pr + k[2][0]/2, cohete->pphi + k[3][0]/2, t+hs/2);
+    k[3][1] = hs * fpphi(cohete->r + k[0][0]/2, cohete->phi + k[1][0]/2, cohete->pr + k[2][0]/2, cohete->pphi + k[3][0]/2, t+hs/2);
 
     // Evaluo k3
-    k[0][2] = h * fr(cohete->pr + k[2][1]/2);
-    k[1][2] = h * fphi(cohete->pphi + k[3][1]/2, cohete->r + k[0][1]/2);
-    k[2][2] = h * fpr(cohete->r + k[0][1]/2, cohete->phi + k[1][1]/2, cohete->pr + k[2][1]/2, cohete->pphi + k[3][1]/2, t);
-    k[3][2] = h * fpphi(cohete->r + k[0][1]/2, cohete->phi + k[1][1]/2, cohete->pr + k[2][1]/2, cohete->pphi + k[3][1]/2, t);
+    k[0][2] = hs * fr(cohete->pr + k[2][1]/2);
+    k[1][2] = hs * fphi(cohete->pphi + k[3][1]/2, cohete->r + k[0][1]/2);
+    k[2][2] = hs * fpr(cohete->r + k[0][1]/2, cohete->phi + k[1][1]/2, cohete->pr + k[2][1]/2, cohete->pphi + k[3][1]/2, t+hs/2);
+    k[3][2] = hs * fpphi(cohete->r + k[0][1]/2, cohete->phi + k[1][1]/2, cohete->pr + k[2][1]/2, cohete->pphi + k[3][1]/2, t+hs/2);
 
     // Evaluo k4
-    k[0][3] = h * fr(cohete->pr + k[2][2]);
-    k[1][3] = h * fphi(cohete->pphi + k[3][2], cohete->r + k[0][2]);
-    k[2][3] = h * fpr(cohete->r + k[0][2], cohete->phi + k[1][2], cohete->pr + k[2][2], cohete->pphi + k[3][2], t);
-    k[3][3] = h * fpphi(cohete->r + k[0][2], cohete->phi + k[1][2], cohete->pr + k[2][2], cohete->pphi + k[3][2], t);
+    k[0][3] = hs * fr(cohete->pr + k[2][2]);
+    k[1][3] = hs * fphi(cohete->pphi + k[3][2], cohete->r + k[0][2]);
+    k[2][3] = hs * fpr(cohete->r + k[0][2], cohete->phi + k[1][2], cohete->pr + k[2][2], cohete->pphi + k[3][2], t+hs);
+    k[3][3] = hs * fpphi(cohete->r + k[0][2], cohete->phi + k[1][2], cohete->pr + k[2][2], cohete->pphi + k[3][2], t+hs);
 
     // Actualizo las variables 
     cohete->r   += (k[0][0] + 2*k[0][1] + 2*k[0][2] + k[0][3]) / 6;
@@ -97,11 +98,12 @@ int main (void)
     fileluna = fopen("luna.txt", "w");
 
     // Inicializo las variables del cohete;
-    LAT=3.14159/2; //Ecuador
+    LAT=3.1415/2; //
     cohete.r=RT/d;
-    cohete.phi=3.14159/2;
+    cohete.phi=3.1415/2+0.15;
     cohete.pr=sqrt(2*G*MT/RT)*cos(LAT-cohete.phi)/d;
     cohete.pphi=cohete.r*sqrt(2*G*MT/RT)*sin(LAT-cohete.phi)/(d*d);
+
     
     //coloco coordenadas de la luna (Al principio alineado en el eje y)
     xluna=0;
@@ -109,17 +111,23 @@ int main (void)
    
     // Imprimo la posición inicial de la luna y del cohete
     fprintf(fileluna, "%lf, %lf\n", xluna, yluna);
-    fprintf(filecohete, "%lf, %lf\n", cohete.r*cos(cohete.phi), cohete.r*sin(cohete.phi));
+    fprintf(filecohete, "%lf, %lf\n", cohete.r*cos(LAT), cohete.r*sin(LAT));
 
-    for(i=0; i<100000; i++)
+    for(i=0; i<7000; i++)
     {   
         t=i*h*60; // tiempo en segundos
         runge_kuttap(&cohete, filecohete, t);
 
         // Actualizo la posición de la luna
-        xluna = 1*sin(omega*t);
-        yluna = 1*cos(omega*t);
+        xluna =-1*sin(omega*t);
+        yluna =1*cos(omega*t);
         fprintf(fileluna, "%lf, %lf\n", xluna, yluna);
+
+       // if(sqrt(cohete.r*cohete.r - 2*cohete.r*cos(cohete.phi-omega*t)) < RL/RT)
+       // {
+       //     printf("El cohete colisiona con la luna en el tiempo: %lf minutos\n", t/60);
+       //     break;
+       // }
     }
 
     return 0;
