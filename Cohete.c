@@ -2,162 +2,125 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define h 0.01
-#define g 9.81
+#define G 6.65e-11
+#define MT 5.9736e24
+#define ML 0.07349e24
+#define d 3.844e8
+#define omega 2.6617e-6
+#define RT 6.378160e6
+#define RL 1.7374e6
+#define h 1 //minuto
 
 typedef struct {
-    double thetha,phi;
-    double thethap,phip;
-} cuerpos;
+    double r,phi;
+    double pr,pphi;
+} cohete;
 
 //hago las funciones para evaluar las derivadas a apartir de f
-double ftheta(double theta)
+double fr(double pr)
 {
-    return theta;
+    return pr;
 }
 
-double fphi(double phi)
+double fphi(double pphi,double r)
 {
-    return phi;
+    return pphi/(r*r);
 }
 
-double fthethap(double thetha, double phi, double thethap, double phip)
-{
-    return (g*sin(phi)*cos(-phi+thetha) - 2*g*sin(thetha) - pow(phip, 2)*cos(-phi+thetha)*sin(-phi+thetha) - pow(phip, 2)*sin(-phi + thetha))/(2 - pow(cos(-phi+thetha), 2));
+double fpr(double r, double phi, double pr, double pphi,double t)
+{  
+    double rprima, mu, delta;
+    delta=G*MT/(d*d*d);
+    mu=ML/MT;
+    rprima=sqrt(1+r*r - 2*r*cos(phi-omega*h));
+    return pphi*pphi/(r*r*r)-delta*(1/(r*r)+mu*1/(rprima*rprima*rprima)*(r-cos(phi-omega*t)));
 }
 
-double fphip(double thetha, double phi, double thethap, double phip)
+double fpphi(double r, double phi, double pr, double pphi,double t)
 {
-    return (g*sin(thetha)*cos(-phi+thetha) - g*sin(phi) + 0.5*pow(phip, 2)*cos(-phi+thetha)*sin(-phi+thetha) + pow(phip, 2)*sin(-phi+thetha))/(1 - 0.5*pow(cos(-phi+thetha), 2));
+    double delta,mu, rprima;
+    delta=G*MT/(d*d*d);
+    mu=ML/MT;
+    rprima=sqrt(1+r*r - 2*r*cos(phi-omega*h));
+    return -delta*mu*r/(rprima*rprima*rprima)*sin(phi-omega*t);
 }
 
-
-void runge_kuttap(cuerpos *cuerpo, FILE *file)
+void runge_kuttap(cohete *cohete, FILE *file,double t)
 {
     double k[4][4];  
 
     // Evaluo k1
-    k[0][0] = h * ftheta(cuerpo->thethap);
-    k[1][0] = h * fphi(cuerpo->phip);
-    k[2][0] = h * fthethap(cuerpo->thetha, cuerpo->phi, cuerpo->thethap, cuerpo->phip);
-    k[3][0] = h * fphip(cuerpo->thetha, cuerpo->phi, cuerpo->thethap, cuerpo->phip);
+    k[0][0] = h * fr(cohete->pr);
+    k[1][0] = h * fphi(cohete->pphi, cohete->r);
+    k[2][0] = h * fpr(cohete->r, cohete->phi, cohete->pr, cohete->pphi, t);
+    k[3][0] = h * fpphi(cohete->r, cohete->phi, cohete->pr, cohete->pphi, t);
 
     // Evaluo k2
-    k[0][1] = h * ftheta(cuerpo->thethap + k[2][0]/2);
-    k[1][1] = h * fphi(cuerpo->phip + k[3][0]/2);
-    k[2][1] = h * fthethap(cuerpo->thetha + k[0][0]/2, cuerpo->phi + k[1][0]/2, cuerpo->thethap + k[2][0]/2, cuerpo->phip + k[3][0]/2);
-    k[3][1] = h * fphip(cuerpo->thetha + k[0][0]/2, cuerpo->phi + k[1][0]/2, cuerpo->thethap + k[2][0]/2, cuerpo->phip + k[3][0]/2);
+    k[0][1] = h * fr(cohete->pr + k[2][0]/2);
+    k[1][1] = h * fphi(cohete->pphi + k[3][0]/2, cohete->r + k[0][0]/2);
+    k[2][1] = h * fpr(cohete->r + k[0][0]/2, cohete->phi + k[1][0]/2, cohete->pr + k[2][0]/2, cohete->pphi + k[3][0]/2, t);
+    k[3][1] = h * fpphi(cohete->r + k[0][0]/2, cohete->phi + k[1][0]/2, cohete->pr + k[2][0]/2, cohete->pphi + k[3][0]/2, t);
 
     // Evaluo k3
-    k[0][2] = h * ftheta(cuerpo->thethap + k[2][1]/2);
-    k[1][2] = h * fphi(cuerpo->phip + k[3][1]/2);
-    k[2][2] = h * fthethap(cuerpo->thetha + k[0][1]/2, cuerpo->phi + k[1][1]/2, cuerpo->thethap + k[2][1]/2, cuerpo->phip + k[3][1]/2);
-    k[3][2] = h * fphip(cuerpo->thetha + k[0][1]/2, cuerpo->phi + k[1][1]/2, cuerpo->thethap + k[2][1]/2, cuerpo->phip + k[3][1]/2);
+    k[0][2] = h * fr(cohete->pr + k[2][1]/2);
+    k[1][2] = h * fphi(cohete->pphi + k[3][1]/2, cohete->r + k[0][1]/2);
+    k[2][2] = h * fpr(cohete->r + k[0][1]/2, cohete->phi + k[1][1]/2, cohete->pr + k[2][1]/2, cohete->pphi + k[3][1]/2, t);
+    k[3][2] = h * fpphi(cohete->r + k[0][1]/2, cohete->phi + k[1][1]/2, cohete->pr + k[2][1]/2, cohete->pphi + k[3][1]/2, t);
 
     // Evaluo k4
-    k[0][3] = h * ftheta(cuerpo->thethap + k[2][2]);
-    k[1][3] = h * fphi(cuerpo->phip + k[3][2]);
-    k[2][3] = h * fthethap(cuerpo->thetha + k[0][2], cuerpo->phi + k[1][2], cuerpo->thethap + k[2][2], cuerpo->phip + k[3][2]);
-    k[3][3] = h * fphip(cuerpo->thetha + k[0][2], cuerpo->phi + k[1][2], cuerpo->thethap + k[2][2], cuerpo->phip + k[3][2]);
+    k[0][3] = h * fr(cohete->pr + k[2][2]);
+    k[1][3] = h * fphi(cohete->pphi + k[3][2], cohete->r + k[0][2]);
+    k[2][3] = h * fpr(cohete->r + k[0][2], cohete->phi + k[1][2], cohete->pr + k[2][2], cohete->pphi + k[3][2], t);
+    k[3][3] = h * fpphi(cohete->r + k[0][2], cohete->phi + k[1][2], cohete->pr + k[2][2], cohete->pphi + k[3][2], t);
 
     // Actualizo las variables 
-    cuerpo->thetha   += (k[0][0] + 2*k[0][1] + 2*k[0][2] + k[0][3]) / 6;
-    cuerpo->phi      += (k[1][0] + 2*k[1][1] + 2*k[1][2] + k[1][3]) / 6;
-    cuerpo->thethap  += (k[2][0] + 2*k[2][1] + 2*k[2][2] + k[2][3]) / 6;
-    cuerpo->phip     += (k[3][0] + 2*k[3][1] + 2*k[3][2] + k[3][3]) / 6;
+    cohete->r   += (k[0][0] + 2*k[0][1] + 2*k[0][2] + k[0][3]) / 6;
+    cohete->phi      += (k[1][0] + 2*k[1][1] + 2*k[1][2] + k[1][3]) / 6;
+    cohete->pr  += (k[2][0] + 2*k[2][1] + 2*k[2][2] + k[2][3]) / 6;
+    cohete->pphi     += (k[3][0] + 2*k[3][1] + 2*k[3][2] + k[3][3]) / 6;
 
     // Guardo los resultados
-    fprintf(file, "%lf, %lf, %lf, %lf\n", cuerpo->thetha, cuerpo->phi, cuerpo->thethap, cuerpo->phip);
+    fprintf(file, "%lf, %lf\n", cohete->r*cos(cohete->phi), cohete->r*sin(cohete->phi));
 }
 
 
 
 int main (void)
 {
-    double desv, desvsum=0, coeflyu=0; 
-    double energias[] = {1, 3, 5, 10, 15};
-    int num_energias = 5,j,E;
-    cuerpos cuerpo;
-    cuerpos cuerpoperturbado;
-
-    FILE *file, *file2, *file3, *file4;
-    file = fopen("Pendulo_dobleA2.txt", "w");
-    if (file == NULL) {
-        printf("Error opening file!\n");
-        return 1;
-    }
-
-    file2 = fopen("Pendulo_doblePerturbado.txt", "w");
-    if (file2 == NULL) {
-        printf("Error opening file!\n");
-        return 1;
-    }
-
-    file3 = fopen("Lyupanov.txt", "w");
-    if (file3 == NULL) {
-        printf("Error opening file!\n");
-        return 1;
-    }
-
+    cohete cohete; 
+    double xluna, yluna, t, LAT;
+    FILE *filecohete, *fileluna;
+    int i;
     
-    //Lo hago para 5 energías diferentes y paralelizo
-    #pragma omp parallel for private(j)
-    for(j=0; j<num_energias;j++)
-    {
-    E=energias[j];
-    cuerpo.thetha=0.15;
-    cuerpo.phi=0.08;
-    cuerpo.thethap=sqrt(2*(E+9.8*(2*cos(cuerpo.thetha)+cos(cuerpo.phi))-3*9.8));
-    //cuerpo.thethap=0.0;
-    cuerpo.phip=0.0;
+    // creo un archivo para el cohete y otro para la luna
+    filecohete = fopen("cohete.txt", "w"); 
+    fileluna = fopen("luna.txt", "w");
 
-    desv=0.007;
-    cuerpoperturbado.thetha=cuerpo.thetha;
-    cuerpoperturbado.phi=cuerpo.phi+desv;    
-    cuerpoperturbado.thethap=cuerpo.thethap;
-    cuerpoperturbado.phip=cuerpo.phip;
+    // Inicializo las variables del cohete;
+    LAT=3.14159/2; //Ecuador
+    cohete.r=RT/d;
+    cohete.phi=3.14159/2;
+    cohete.pr=sqrt(2*G*MT/RT)*cos(LAT-cohete.phi)/d;
+    cohete.pphi=cohete.r*sqrt(2*G*MT/RT)*sin(LAT-cohete.phi)/(d*d);
     
-
-    //Voy a guardar los resultados en un archivo
-    #pragma omp critica 
-    { fprintf(file, "%lf, %lf, %lf, %lf\n", cuerpo.thetha, cuerpo.phi, cuerpo.thethap, cuerpo.phip);
-    fprintf(file2, "%lf, %lf, %lf, %lf\n", cuerpoperturbado.thetha, cuerpoperturbado.phi, cuerpoperturbado.thethap, cuerpoperturbado.phip);
-    }
-
-    for(double i=0; i<100; i += h)
-    {
-        runge_kuttap(&cuerpo, file);
-        runge_kuttap(&cuerpoperturbado,file2);
-
-        //Calculo la desviación 
-        desvsum=sqrt(pow((cuerpo.thetha-cuerpoperturbado.thetha),2)+
-                     pow((cuerpo.phi-cuerpoperturbado.phi),2)+
-                     pow((cuerpo.thethap-cuerpoperturbado.thethap),2)+
-                     pow((cuerpo.phip-cuerpoperturbado.phip),2));
-
-        
-
-        //Obtengo el coeficiente de lyupanov;
-        coeflyu+=log(fabs(desvsum)/fabs(desv));
-
-        //cuerpoperturbado.thetha=cuerpo.thetha+desv*(cuerpoperturbado.thetha-cuerpo.thetha)/(abs(cuerpoperturbado.thetha-cuerpo.thetha));
-        #pragma omp critica
-        fprintf(file3,"%lf\n",coeflyu/(h+i+h)); //Guardo el coeficiente de lyupanov en el archivo
-    }
-    coeflyu=coeflyu/(100*h);
-    printf("%f\n",coeflyu);
-
-    coeflyu=0; //Reinicio el coeficiente de lyupanov para la siguiente energía
-    desvsum=0; //Reinicio la suma de desviaciones para la siguiente energía
-    //Hago entre una energia y otra una separación en el archivo 
-    fprintf(file3, "\n");
+    //coloco coordenadas de la luna (Al principio alineado en el eje y)
+    xluna=0;
+    yluna=1;
    
-}
+    // Imprimo la posición inicial de la luna y del cohete
+    fprintf(fileluna, "%lf, %lf\n", xluna, yluna);
+    fprintf(filecohete, "%lf, %lf\n", cohete.r*cos(cohete.phi), cohete.r*sin(cohete.phi));
 
-    fclose(file);
-    fclose(file2);
-   
-    
+    for(i=0; i<100000; i++)
+    {   
+        t=i*h*60; // tiempo en segundos
+        runge_kuttap(&cohete, filecohete, t);
+
+        // Actualizo la posición de la luna
+        xluna = 1*sin(omega*t);
+        yluna = 1*cos(omega*t);
+        fprintf(fileluna, "%lf, %lf\n", xluna, yluna);
+    }
 
     return 0;
 }
