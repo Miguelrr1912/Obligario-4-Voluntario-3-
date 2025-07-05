@@ -9,8 +9,8 @@ d = 3.844e8       # Distancia Tierra–Luna (m)
 RT_norm = RT / d  # Radio Tierra normalizado
 
 # --- 2. Cargar datos ---
-cohete_data = np.loadtxt("C:/Users/User/Documents/Fisica_compu/Compu/Obligatorio4 (Voluntario 3)/Obligario-4-Voluntario-3-/cohete.txt", delimiter=",")
-luna_data = np.loadtxt("C:/Users/User/Documents/Fisica_compu/Compu/Obligatorio4 (Voluntario 3)/Obligario-4-Voluntario-3-/luna.txt", delimiter=",")
+cohete_data = np.loadtxt("C:/Users/User/Documents/Fisica_compu/Compu/Obligatorio4 (Voluntario 3)/Obligario-4-Voluntario-3-/coheteaux.txt", delimiter=",")
+luna_data = np.loadtxt("C:/Users/User/Documents/Fisica_compu/Compu/Obligatorio4 (Voluntario 3)/Obligario-4-Voluntario-3-/lunaaux.txt", delimiter=",")
 
 x_cohete = cohete_data[:, 0]
 y_cohete = cohete_data[:, 1]
@@ -42,11 +42,11 @@ def animate(i):
 
 # --- 5. Animación ---
 frames = min(len(x_cohete), len(x_luna))
-ani = FuncAnimation(fig, animate, frames=frames, interval=0.1, blit=True)
+ani = FuncAnimation(fig, animate, frames=frames, interval=100, blit=True)
 
 # --- 6. Mostrar ---
 ax.set_title("Trayectoria Cohete y Luna (normalizado)")
 ax.legend()
 plt.show()
 
-ani.save("C:/Users/User/Documents/Fisica_compu/Compu/Obligatorio4 (Voluntario 3)/Obligario-4-Voluntario-3-/trayectoria_cohete_luna_rugge_kutta.mp4", fps=30, dpi=200)
+ani.save("C:/Users/User/Documents/Fisica_compu/Compu/Obligatorio4 (Voluntario 3)/Obligario-4-Voluntario-3-/trayectoria_cohete_lunarugge_kutta_adaptado.mp4", fps=30, dpi=200)
